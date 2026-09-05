@@ -3,28 +3,45 @@
 namespace App\Http\Controllers;
 
 use App\Models\Flight;
+use App\Services\FlightAvailability;
 use App\Services\FlightRankingService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ViewErrorBag;
+use Illuminate\Validation\Rule;
 
 class FlightSearchController extends Controller
 {
-    public function index(Request $request, FlightRankingService $rankingService): Response
+    public function index(Request $request, FlightRankingService $rankingService, FlightAvailability $availabilityService): Response
     {
         $input = $request->only(['origin', 'destination', 'departure_date', 'criterion', 'price_importance']);
         $input += ['criterion' => 'price', 'price_importance' => '50'];
         $searched = $request->hasAny(['search', 'origin', 'destination', 'departure_date', 'criterion', 'price_importance']);
+        $availability = $availabilityService->summary();
+        $browsing = $request->query('stage') === 'availability';
+        $attempted = $searched || $browsing;
+        $searched = $searched && ! $browsing;
+        if ($browsing) {
+            $origin = is_string($input['origin'] ?? null) ? $input['origin'] : '';
+            $destination = is_string($input['destination'] ?? null) ? $input['destination'] : '';
+            $date = is_string($input['departure_date'] ?? null) ? $input['departure_date'] : '';
+            if (! isset($availability[$origin][$destination])) {
+                $input['destination'] = null;
+                $input['departure_date'] = null;
+            } elseif (! isset($availability[$origin][$destination][$date])) {
+                $input['departure_date'] = null;
+            }
+        }
         $flights = collect();
         $result = null;
-        $validator = Validator::make($searched ? $input : [], $searched ? [
+        $validator = Validator::make($attempted ? $input : [], $attempted ? [
             'criterion' => ['bail', 'required', 'string', 'in:price,duration,balanced'],
             'price_importance' => ['bail', 'required', 'integer', 'between:0,100'],
-            'origin' => ['bail', 'required', 'string', 'regex:/^[A-Z]{3}$/'],
-            'destination' => ['bail', 'required', 'string', 'regex:/^[A-Z]{3}$/', 'different:origin'],
-            'departure_date' => ['bail', 'required', 'string', 'date_format:Y-m-d'],
+            'origin' => ['bail', 'required', 'string', 'regex:/^[A-Z]{3}$/', Rule::in(array_keys($availability))],
+            'destination' => ['bail', $browsing ? 'nullable' : 'required', 'string', 'regex:/^[A-Z]{3}$/', 'different:origin'],
+            'departure_date' => ['bail', $browsing ? 'nullable' : 'required', 'string', 'date_format:Y-m-d'],
         ] : [], [
             'criterion.required' => 'Selecciona un criterio de ordenamiento.',
             'criterion.string' => 'Selecciona un criterio válido.',
@@ -32,6 +49,7 @@ class FlightSearchController extends Controller
             'price_importance.required' => 'Indica la importancia del precio.',
             'price_importance.integer' => 'La importancia del precio debe ser un entero entre 0 y 100.',
             'price_importance.between' => 'La importancia del precio debe estar entre 0 y 100.',
+            'origin.in' => 'Este aeropuerto no tiene salidas disponibles.',
             'origin.required' => 'Ingresa el origen.',
             'destination.required' => 'Ingresa el destino.',
             'departure_date.required' => 'Ingresa la fecha de salida.',
@@ -43,6 +61,17 @@ class FlightSearchController extends Controller
             'departure_date.string' => 'Ingresa una fecha válida con formato AAAA-MM-DD.',
             'departure_date.date_format' => 'Ingresa una fecha válida con formato AAAA-MM-DD.',
         ]);
+
+        $validator->after(function ($validator) use ($input, $availability, $searched): void {
+            if (! $searched || $validator->errors()->isNotEmpty()) {
+                return;
+            }
+            if (! isset($availability[$input['origin']][$input['destination']])) {
+                $validator->errors()->add('destination', 'No hay vuelos disponibles para esta ruta. Selecciona otro destino.');
+            } elseif (! isset($availability[$input['origin']][$input['destination']][$input['departure_date']])) {
+                $validator->errors()->add('departure_date', 'No hay vuelos disponibles en esta fecha. Elige uno de los días habilitados.');
+            }
+        });
 
         if ($searched && $validator->passes()) {
             $validated = $validator->validated();
@@ -83,8 +112,20 @@ class FlightSearchController extends Controller
             $values[$field] = is_string($input[$field] ?? null) ? $input[$field] : '';
         }
 
+        $destinations = $availability[$values['origin']] ?? [];
+        $days = $destinations[$values['destination']] ?? [];
+        // Nunca presentar una fecha antigua como seleccionada si ya no está disponible.
+        if (! isset($days[$values['departure_date']])) {
+            $values['departure_date'] = '';
+        }
+
         return response()->view('flights.index', [
             'values' => $values,
+            'availability' => $availability,
+            'airports' => config('airports'),
+            'destinations' => $destinations,
+            'days' => $days,
+            'example' => $availabilityService->example($availability),
             'result' => $result,
             'scores' => collect($result['flights'] ?? [])->keyBy('id'),
             'searched' => $searched,
