@@ -11,7 +11,7 @@ class FlightRankingService
 
     /**
      * Recibe FlightData válidos según docs/contrato-integracion.md, sin modificarlos.
-     * $includeTrace queda reservado para B3; en B2 demonstration siempre es null.
+     * La demostración usa hasta ocho vuelos y reutiliza su normalización global.
      *
      * @param  list<array<string, mixed>>  $flights
      * @return array{
@@ -21,7 +21,11 @@ class FlightRankingService
      *     flights: list<array<string, mixed>>,
      *     comparisons: int,
      *     normalization: array{min_price: int, max_price: int, min_duration: int, max_duration: int}|null,
-     *     demonstration: null
+     *     demonstration: array{
+     *         selection: string, limit: int, total_results: int, criterion: string, key: string,
+     *         input: list<array<string, mixed>>, flights: list<array<string, mixed>>,
+     *         comparisons: int, trace: list<array<string, mixed>>
+     *     }|null
      * }
      */
     public function rank(
@@ -71,11 +75,26 @@ class FlightRankingService
         };
 
         // Comparar sin redondear ni añadir desempates: Merge Sort conserva la estabilidad.
-        $sorted = $this->mergeSort->sort(
-            $rankedFlights,
-            fn (array $left, array $right): int => $left[$key] <=> $right[$key],
-            false,
-        );
+        $compare = fn (array $left, array $right): int => $left[$key] <=> $right[$key];
+        $sorted = $this->mergeSort->sort($rankedFlights, $compare, false);
+        $demonstration = null;
+
+        if ($includeTrace) {
+            // La entrada aún conserva el orden original y las puntuaciones de todos los vuelos.
+            $input = array_slice($rankedFlights, 0, 8);
+            $demonstrated = $this->mergeSort->sort($input, $compare, true);
+            $demonstration = [
+                'selection' => 'first_input_items',
+                'limit' => 8,
+                'total_results' => count($flights),
+                'criterion' => $criterion,
+                'key' => $key,
+                'input' => $input,
+                'flights' => $demonstrated['items'],
+                'comparisons' => $demonstrated['comparisons'],
+                'trace' => $demonstrated['trace'],
+            ];
+        }
 
         return [
             'criterion' => $criterion,
@@ -84,7 +103,7 @@ class FlightRankingService
             'flights' => $sorted['items'],
             'comparisons' => $sorted['comparisons'],
             'normalization' => $normalization,
-            'demonstration' => null,
+            'demonstration' => $demonstration,
         ];
     }
 
