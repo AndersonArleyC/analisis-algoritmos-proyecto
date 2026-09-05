@@ -27,6 +27,26 @@
             :focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
         </style>
     @endif
+    <style>
+        [hidden] { display: none !important; }
+        .flight-card { min-width: 0; overflow-wrap: anywhere; }
+        .flight-card:has(input:checked) { outline: 2px solid #2563eb; }
+        .flight-choice input { width: auto; }
+        button:disabled, .flight-choice:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+        #comparison-table th, #comparison-table td { padding: .75rem; border-bottom: 1px solid #cbd5e1; text-align: left; }
+        #comparison-table { width: 100%; min-width: 42rem; border-collapse: collapse; }
+    </style>
+    @if (! file_exists(public_path('build/manifest.json')) && ! file_exists(public_path('hot')))
+        <style>
+            .flight-grid { display: grid; gap: 1rem; }
+            .flight-card { padding: 1.25rem; border: 1px solid #cbd5e1; border-radius: .75rem; background: white; }
+            .flight-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+            .flight-card dt { color: #475569; } .flight-card dd { margin: 0; }
+            .flight-choice { margin-top: 1rem; padding: .75rem; background: #eff6ff; }
+            #comparison-panel { margin-top: 1.5rem; }
+            @media (min-width: 768px) { .flight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        </style>
+    @endif
 </head>
 <body class="bg-slate-50 text-slate-900">
 <main class="mx-auto max-w-6xl space-y-6 px-4 py-10">
@@ -72,37 +92,20 @@
                 <p role="status">No hay vuelos para la ruta y fecha seleccionadas. Prueba otra búsqueda o carga el ejemplo.</p>
             @else
                 <p class="mb-3 text-sm text-slate-600">Horarios de America/Bogota. Precio total por pasajero con impuestos simulados.</p>
-                <div class="overflow-x-auto rounded border border-slate-200 bg-white" tabindex="0" role="region" aria-label="Resultados de vuelos">
-                    <table class="w-full text-left text-sm">
-                        <caption class="sr-only">Vuelos encontrados para {{ $values['origin'] }} a {{ $values['destination'] }} el {{ $values['departure_date'] }}</caption>
-                        <thead class="bg-blue-50">
-                        <tr>
-                            @foreach (['Vuelo', 'Ruta', 'Salida', 'Llegada', 'Duración total', 'Escalas', 'Equipaje', 'Precio COP'] as $heading)
-                                <th scope="col" class="px-4 py-3">{{ $heading }}</th>
-                            @endforeach
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach ($flights as $flight)
-                            <tr class="border-t border-slate-200">
-                                <td class="px-4 py-3">{{ $flight->airline }} · {{ $flight->flight_code }}</td>
-                                <td class="whitespace-nowrap px-4 py-3">{{ $flight->origin }} → {{ $flight->destination }}</td>
-                                <td class="whitespace-nowrap px-4 py-3">{{ $flight->departure_at->setTimezone('America/Bogota')->format('d/m/Y H:i') }}</td>
-                                <td class="whitespace-nowrap px-4 py-3">{{ $flight->arrival_at->setTimezone('America/Bogota')->format('d/m/Y H:i') }}</td>
-                                <td class="px-4 py-3">{{ $flight->duration_minutes }} min</td>
-                                <td class="px-4 py-3">{{ $flight->stops }}</td>
-                                <td class="px-4 py-3">{{ $flight->baggage_description }}</td>
-                                <td class="whitespace-nowrap px-4 py-3">$ {{ number_format($flight->total_price_cop, 0, ',', '.') }}</td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
+                <div id="flight-results" class="flight-grid grid gap-4 md:grid-cols-2">
+                    @foreach ($flights as $flight)
+                        <x-flights.card :flight="$flight" />
+                    @endforeach
                 </div>
+                <x-flights.comparison />
             @endif
         </section>
     @elseif (! $searched)
         <p>Ingresa una ruta y una fecha para consultar los vuelos de demostración.</p>
     @endif
 </main>
+@if ($searched && ! $errors->any() && $flights->isNotEmpty())
+    @include('flights.comparison-script')
+@endif
 </body>
 </html>
