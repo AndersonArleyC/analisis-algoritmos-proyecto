@@ -78,8 +78,9 @@
                     @enderror
                 </div>
             @endforeach
+            <x-flights.preferences :values="$values" />
             <div class="flex flex-wrap items-center gap-4 sm:col-span-3">
-                <button type="submit" class="rounded bg-blue-700 px-5 py-2 font-semibold text-white hover:bg-blue-800 focus:outline-2 focus:outline-offset-2 focus:outline-blue-600">Buscar vuelos</button>
+                <button type="submit" class="rounded bg-blue-700 px-5 py-2 font-semibold text-white hover:bg-blue-800 focus:outline-2 focus:outline-offset-2 focus:outline-blue-600">Buscar vuelos y aplicar preferencias</button>
                 <a href="{{ route('flights.index', ['origin' => 'BOG', 'destination' => 'MDE', 'departure_date' => '2026-10-15']) }}" class="text-blue-700 underline">Cargar ejemplo</a>
             </div>
         </form>
@@ -88,18 +89,27 @@
     @if ($searched && ! $errors->any())
         <section aria-labelledby="results-title">
             <h2 id="results-title" class="mb-3 text-xl font-semibold">Resultados: {{ $flights->count() }} vuelos</h2>
+            <p id="ranking-summary" class="my-3">Criterio aplicado: {{ ['price' => 'Más barato', 'duration' => 'Más rápido', 'balanced' => 'Mejor equilibrio'][$result['criterion']] }}.
+                Precio {{ round($result['priceWeight'] * 100) }} % · Tiempo {{ round($result['timeWeight'] * 100) }} %.
+                Comparaciones del ranking completo ({{ count($result['flights']) }} vuelos): {{ $result['comparisons'] }}.
+                El contador de la demostración se muestra por separado.
+            </p>
+            @if ($result['criterion'] === 'balanced')
+                <p id="score-help" class="my-3">Menor puntuación significa mejor equilibrio según los pesos aplicados. Es una regla propia del proyecto: depende de todos los vuelos encontrados y no es un porcentaje de calidad. Solo se redondea al mostrar; comparar selecciones no cambia la puntuación.</p>
+            @endif
             @if ($flights->isEmpty())
                 <p role="status">No hay vuelos para la ruta y fecha seleccionadas. Prueba otra búsqueda o carga el ejemplo.</p>
             @else
                 <p class="mb-3 text-sm text-slate-600">Horarios de America/Bogota. Precio total por pasajero con impuestos simulados.</p>
                 <div id="flight-results" class="flight-grid grid gap-4 md:grid-cols-2">
                     @foreach ($flights as $flight)
-                        <x-flights.card :flight="$flight" />
+                        <x-flights.card :flight="$flight" :score="$scores[$flight->id]['score']" />
                     @endforeach
                 </div>
                 <x-flights.comparison />
             @endif
         </section>
+        <x-algorithm.demo :demonstration="$result['demonstration']" />
     @elseif (! $searched)
         <p>Ingresa una ruta y una fecha para consultar los vuelos de demostración.</p>
     @endif

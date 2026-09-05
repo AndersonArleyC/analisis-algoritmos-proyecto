@@ -1,4 +1,4 @@
-@props(['flight'])
+@props(['flight', 'score' => null])
 
 <article class="flight-card rounded-xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="flight-{{ $flight->id }}-title">
     <h3 id="flight-{{ $flight->id }}-title" class="text-lg font-semibold text-blue-800">{{ $flight->airline }} · {{ $flight->flight_code }}</h3>
@@ -12,6 +12,9 @@
     </dl>
     <p class="mt-4 text-xl font-bold">$ {{ number_format($flight->total_price_cop, 0, ',', '.') }} COP</p>
     <p class="text-sm text-slate-600">Total por pasajero · Impuestos simulados incluidos</p>
+    @if ($score !== null)
+        <p class="my-3 font-medium text-blue-800" aria-describedby="score-help">Puntuación de equilibrio: <span title="{{ $score }}">{{ number_format($score, 6, ',', '.') }}</span></p>
+    @endif
     <label class="flight-choice mt-4 flex items-center gap-3 rounded bg-blue-50 p-3" hidden>
         <input type="checkbox" class="h-5 w-5 accent-blue-700" data-flight-choice
                data-code="{{ $flight->flight_code }}" data-airline="{{ $flight->airline }}"
