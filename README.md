@@ -200,4 +200,4 @@ Pendientes reales: ejecutar la instalación completa en un equipo Windows y agre
 
 Esta distribución describe responsabilidades, no acredita commits ni da por terminadas tareas ajenas. Ambos integrantes deben poder explicar la solución completa.
 
-**Video de sustentación: pendiente de agregar el enlace real.**
+**Video de sustentación: https://drive.google.com/drive/folders/1FH_Rn8OCsgGPFc1u9ajL4KwBsqM1ZkUD?usp=sharing**
