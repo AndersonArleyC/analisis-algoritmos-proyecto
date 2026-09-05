@@ -1,29 +1,20 @@
-@props(['values'])
+@props(['errors', 'values', 'canSearch'])
 @php
     $importance = filter_var($values['price_importance'], FILTER_VALIDATE_INT);
     $importance = $importance !== false && $importance >= 0 && $importance <= 100 ? $importance : 50;
 @endphp
-<div class="sm:col-span-3" style="flex-basis: 100%; min-width: 0">
-    <label for="criterion">Ordenar vuelos</label>
-    <select id="criterion" name="criterion" class="my-2 rounded border border-slate-400 bg-white p-2" aria-invalid="{{ $errors->has('criterion') ? 'true' : 'false' }}" aria-describedby="criterion-error">
-        @foreach (['price' => 'Más barato', 'duration' => 'Más rápido', 'balanced' => 'Mejor equilibrio'] as $key => $label)
-            <option value="{{ $key }}" @selected($values['criterion'] === $key)>{{ $label }}</option>
+<section class="preferences" aria-labelledby="preferences-title">
+    <div class="preferences-heading"><h2 id="preferences-title">¿Qué es lo más importante para ti?</h2><p>Ordena las opciones según tu manera de viajar.</p></div>
+    <fieldset class="criteria"><legend class="visually-hidden">Criterio de ordenamiento</legend>
+        @foreach (['price' => ['Más barato', 'Prioriza el ahorro'], 'duration' => ['Más rápido', 'Menos tiempo de viaje'], 'balanced' => ['Mejor equilibrio', 'Según tus preferencias']] as $key => [$label, $hint])
+            <label class="criterion-option"><input type="radio" name="criterion" value="{{ $key }}" form="flight-search" @checked($values['criterion'] === $key) aria-describedby="criterion-error"><span><strong>{{ $label }}</strong><small>{{ $hint }}</small></span></label>
         @endforeach
-    </select>
-    <p id="criterion-error" class="text-red-700">{{ $errors->first('criterion') }}</p>
-    <label for="price-importance">Importancia del precio</label>
-    <input id="price-importance" name="price_importance" type="range" min="0" max="100" step="1" value="{{ $importance }}"
-           class="my-3 w-full accent-blue-700" aria-describedby="preferences-help importance-error"
-           aria-invalid="{{ $errors->has('price_importance') ? 'true' : 'false' }}">
-    <output id="weight-display" for="price-importance" aria-live="polite">Precio {{ $importance }} % · Tiempo {{ 100 - $importance }} %</output>
-    <p id="importance-error" class="text-red-700">{{ $errors->first('price_importance') }}</p>
-    <p id="preferences-help" class="my-2 text-sm text-slate-600">Los pesos solo afectan Mejor equilibrio. Aumentar el precio prioriza el ahorro; aumentar el tiempo prioriza una menor duración. Pulsa Buscar vuelos y aplicar preferencias para actualizar los resultados y la demostración.</p>
-</div>
-<script>
-    (() => {
-        const slider = document.getElementById('price-importance');
-        slider.addEventListener('input', () => {
-            document.getElementById('weight-display').textContent = `Precio ${slider.value} % · Tiempo ${100 - Number(slider.value)} %`;
-        });
-    })();
-</script>
+    </fieldset>
+    <p id="criterion-error" class="field-error">{{ $errors->first('criterion') }}</p>
+    <div class="weight-row">
+        <div class="weight-control"><label for="price-importance">Importancia del precio</label><input id="price-importance" name="price_importance" form="flight-search" type="range" min="0" max="100" step="1" value="{{ $importance }}" aria-describedby="preferences-help importance-error" aria-invalid="{{ $errors->has('price_importance') ? 'true' : 'false' }}"><output id="weight-display" for="price-importance" aria-live="polite">Precio {{ $importance }} % · Tiempo {{ 100 - $importance }} %</output></div>
+        <button id="apply-preferences" @disabled(! $canSearch) type="submit" name="search" value="1" form="flight-search" class="secondary-button">Aplicar preferencias</button>
+    </div>
+    <p id="importance-error" class="field-error">{{ $errors->first('price_importance') }}</p>
+    <p id="preferences-help" class="field-hint">Los pesos solo afectan Mejor equilibrio: más precio prioriza el ahorro; más tiempo prioriza una menor duración. Pulsa Aplicar preferencias para actualizar resultados y demostración.</p>
+</section>

@@ -109,15 +109,11 @@ class FlightRankingIntegrationTest extends TestCase
         $this->assertSame(0.25, $result['priceWeight']);
     }
 
-    public function test_empty_search_keeps_empty_demo_and_zero_counters(): void
+    public function test_unavailable_date_is_rejected_before_ranking(): void
     {
-        $response = $this->get($this->url(['departure_date' => '2026-11-01', 'criterion' => 'balanced']))->assertOk();
-        $result = $response->viewData('result');
-        $this->assertSame([], $result['flights']);
-        $this->assertSame(0, $result['comparisons']);
-        $this->assertSame(0, $result['demonstration']['comparisons']);
-        $this->assertSame(['input', 'result'], array_column($result['demonstration']['trace'], 'type'));
-        $response->assertSee('No hay vuelos para la ruta y fecha seleccionadas.');
+        $this->get($this->url(['departure_date' => '2026-11-01', 'criterion' => 'balanced']))
+            ->assertStatus(422)->assertViewHas('result', null)
+            ->assertViewHas('errors', fn ($errors) => $errors->has('departure_date'));
     }
 
     private function url(array $options = []): string

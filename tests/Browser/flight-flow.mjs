@@ -1,43 +1,6 @@
-// Chrome debe estar abierto con --remote-debugging-port=9227 (perfil temporal).
-const endpoint = process.env.CHROME_DEBUG_URL ?? 'http://127.0.0.1:9227';
+import {connectBrowser} from './chrome.mjs';
 const url = process.argv[2] ?? 'http://127.0.0.1:8000/?origin=BOG&destination=MDE&departure_date=2026-10-15&criterion=balanced&price_importance=50';
-const page = await (await fetch(endpoint + '/json/new?about:blank', {method: 'PUT'})).json();
-const ws = new WebSocket(page.webSocketDebuggerUrl);
-await new Promise((resolve, reject) => {
-    ws.addEventListener('open', resolve, {once: true});
-    ws.addEventListener('error', reject, {once: true});
-});
-let id = 0;
-const pending = new Map();
-ws.addEventListener('message', event => {
-    const message = JSON.parse(event.data);
-    if (pending.has(message.id)) {
-        pending.get(message.id)(message);
-        pending.delete(message.id);
-    }
-});
-
-async function call(method, params = {}) {
-    const requestId = ++id;
-    const response = new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('Tiempo agotado: ' + method)), 10000);
-        pending.set(requestId, message => {
-            clearTimeout(timer);
-            resolve(message);
-        });
-    });
-    ws.send(JSON.stringify({id: requestId, method, params}));
-    const message = await response;
-    if (message.error) throw new Error(JSON.stringify(message.error));
-    return message.result;
-}
-
-async function evaluate(expression) {
-    const result = await call('Runtime.evaluate', {expression, returnByValue: true});
-    if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
-    return result.result.value;
-}
-
+const {call, evaluate, close} = await connectBrowser();
 const flow = () => {
     const check = (condition, message) => { if (!condition) throw new Error(message); };
     check(innerWidth === 375, 'Viewport exacto de 375 px');
@@ -69,6 +32,7 @@ const flow = () => {
     slider.value='75'; slider.dispatchEvent(new Event('input'));
     check(document.querySelector('#weight-display').textContent.includes('Tiempo 25 %'), 'Complemento del tiempo');
     check(cards===document.querySelector('#flight-results').innerHTML, 'No recalcular al mover el control');
+    document.querySelector('#algorithm-details').open = true;
     const steps=[...document.querySelectorAll('[data-demo-step]')];
     const next=document.querySelector('[data-demo-next]');
     const types=new Set();
@@ -85,7 +49,7 @@ const flow = () => {
     check(!steps[0].hidden && document.querySelector('[data-demo-previous]').disabled, 'Reinicio');
     const form=document.querySelector('form');
     form.addEventListener('submit',e=>e.preventDefault(),{once:true});
-    document.querySelector('#criterion').value='duration';
+    document.querySelector('[name=criterion][value=duration]').checked=true;
     form.dispatchEvent(new Event('submit',{cancelable:true}));
     check(choices.every(c=>!c.checked), 'Aplicar búsqueda o criterio limpia selección');
     return 'PASS: comparación, límites, diferencias, empates, foco, preferencias, navegación y ancho exacto 375 px';
@@ -105,6 +69,5 @@ try {
     if (!ready) throw new Error('La búsqueda de ejemplo no cargó su demostración en 10 segundos.');
     console.log(await evaluate('('+flow.toString()+')()'));
 } finally {
-    await call('Page.close');
-    ws.close();
+    await close();
 }

@@ -121,18 +121,18 @@ class FlightSearchTest extends TestCase
         $this->get('/?origin=BOG')->assertStatus(422)->assertSee('value="BOG"', false);
     }
 
-    public function test_invalid_date_is_preserved_in_form(): void
+    public function test_invalid_date_is_cleared_but_route_is_preserved(): void
     {
         $this->get($this->searchUrl(['departure_date' => '15/10/2026']))
-            ->assertStatus(422)->assertSee('value="15/10/2026"', false)
+            ->assertStatus(422)->assertViewHas('values', fn ($values) => $values['departure_date'] === '')
             ->assertSee('value="BOG"', false)->assertSee('value="MDE"', false);
     }
 
     public function test_search_with_no_matches_displays_empty_state(): void
     {
         foreach ([['departure_date' => '2026-11-01'], ['origin' => 'MDE', 'destination' => 'BOG']] as $input) {
-            $this->get($this->searchUrl($input))->assertOk()
-                ->assertSee('No hay vuelos para la ruta y fecha seleccionadas.')
+            $this->get($this->searchUrl($input))->assertStatus(422)
+                ->assertSee('No hay vuelos disponibles')
                 ->assertViewHas('flights', fn ($flights) => $flights->isEmpty());
         }
     }

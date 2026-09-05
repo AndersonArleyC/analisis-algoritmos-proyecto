@@ -105,20 +105,20 @@ php artisan serve --host=127.0.0.1 --port=8000
 npm run dev
 ```
 
-Vite actualiza los recursos mientras editas. Para una demostración sin el servidor de Vite, ejecuta `npm run build` y utiliza los archivos de `public/build`. La vista incluye estilos mínimos de respaldo si no hay compilación ni servidor Vite; el algoritmo carga sus propios recursos locales. Este respaldo permite usar el buscador, pero no sustituye la comprobación de la compilación de Tailwind.
+Vite actualiza los recursos mientras editas. Para una demostración sin el servidor de Vite, ejecuta `npm run build` y utiliza los archivos de `public/build`. El buscador carga su estilo y comportamiento desde `public/flights/`, también cuando Vite no está ejecutándose. El algoritmo carga sus propios recursos locales. No se añadieron dependencias de diseño.
 
 ## Uso y búsqueda de ejemplo
 
-1. Pulsa **Cargar ejemplo** o introduce origen `BOG`, destino `MDE` y fecha `2026-10-15` (15 de octubre de 2026). Deben aparecer **ocho vuelos**. Las fechas de los seeders son fijas, no relativas al día actual.
+1. Pulsa **Cargar ejemplo** o elige Bogotá (`BOG`), Medellín (`MDE`) y fecha `2026-10-15` en los selectores (15 de octubre de 2026). Deben aparecer **ocho vuelos**. Las fechas de los seeders son fijas, no relativas al día actual.
 2. Selecciona **Más barato**, **Más rápido** o **Mejor equilibrio**. El servidor filtra primero por ruta y día de salida y después llama a `FlightRankingService`.
-3. Ajusta la importancia del precio entre 0 y 100. El tiempo es su complemento; el valor inicial es 50/50. Los pesos solo afectan Mejor equilibrio. Mover el control no cambia resultados: pulsa **Buscar vuelos y aplicar preferencias**. El resumen indica las preferencias realmente aplicadas.
+3. Ajusta la importancia del precio entre 0 y 100. El tiempo es su complemento; el valor inicial es 50/50. Los pesos solo afectan Mejor equilibrio. Mover el control no cambia resultados: pulsa **Aplicar preferencias**. El resumen indica las preferencias realmente aplicadas.
 4. Consulta en las tarjetas los horarios, duración total con escalas, equipaje y precio con impuestos simulados. Una llegada puede corresponder al día siguiente.
 5. Marca **dos o tres vuelos** para compararlos. La tabla muestra la diferencia frente al menor precio y la menor duración de la selección, indicando todas las referencias empatadas. Puede desplazarse horizontalmente dentro de su contenedor en móvil. Quita una selección para habilitar otra o pulsa **Limpiar selección**. Aplicar una búsqueda o criterio nuevo limpia la comparación.
-6. En **Cómo funciona Merge Sort**, utiliza Siguiente, Anterior y Reiniciar. La demostración corresponde al criterio y pesos aplicados. Solo reproduce hasta los primeros ocho vuelos en su orden de entrada; el ranking procesa todos. Su contador es independiente del contador del ranking completo.
+6. Abre la sección desplegable **Cómo funciona Merge Sort** y utiliza Siguiente, Anterior y Reiniciar. La demostración corresponde al criterio y pesos aplicados. Solo reproduce hasta los primeros ocho vuelos en su orden de entrada; el ranking procesa todos. Su contador es independiente del contador del ranking completo.
 
-Los campos son obligatorios, los códigos usan tres letras mayúsculas, origen y destino deben ser distintos y la fecha debe ser real en formato `AAAA-MM-DD`. Las preferencias se validan también en el servidor. Para probar el estado vacío, busca BOG → MDE el `2026-11-01`.
+Los aeropuertos y días proceden de los vuelos almacenados. Elige origen, luego destino y después un día habilitado en el calendario o en **Fechas disponibles**. Los días muestran el precio mínimo cuando hay espacio; al elegirlos aparece un resumen con fecha, cantidad y precio. Origen y destino deben ser distintos. El servidor rechaza rutas y fechas no disponibles incluso si se manipula la URL. Las preferencias también se validan. Si no hay datos, se informa y se deshabilita la búsqueda.
 
-Sin JavaScript puedes buscar y aplicar criterios mediante el formulario, consultar tarjetas y leer todos los pasos del algoritmo; la selección para comparar requiere JavaScript.
+Sin JavaScript, elige un origen y pulsa **Actualizar destinos y fechas**; elige un destino y vuelve a pulsar Actualizar; selecciona una fecha en la lista y pulsa **Buscar vuelos**. Puedes aplicar preferencias y consultar las tarjetas y los pasos del algoritmo. El calendario interactivo y la comparación requieren JavaScript.
 
 ## Algoritmo y equilibrio
 
@@ -187,6 +187,7 @@ Pendientes reales: ejecutar la instalación completa en un equipo Windows y agre
 
 - [Plan y división del proyecto](docs/plan-proyecto.md).
 - [Contrato de integración](docs/contrato-integracion.md).
+- [Disponibilidad, calendario y revisión visual](docs/disponibilidad-buscador.md).
 - [Componente de demostración B4](docs/componente-demo-algoritmo.md).
 - [Validación de algoritmos](docs/validacion-algoritmos.md), a cargo de Anderson.
 
