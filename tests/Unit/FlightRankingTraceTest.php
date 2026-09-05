@@ -103,6 +103,34 @@ class FlightRankingTraceTest extends TestCase
         $this->assertFinalEventMatchesDemonstration($demo);
     }
 
+    #[DataProvider('demonstrationWeights')]
+    public function test_balanced_demonstration_uses_the_requested_weight(float $weight, array $expectedIds, array $expectedScores, int $expectedComparisons): void
+    {
+        $flights = [
+            $this->flight(1, 200000, 720),
+            $this->flight(2, 500000, 120),
+            $this->flight(3, 280000, 180),
+        ];
+        $result = (new FlightRankingService(new MergeSort))->rank($flights, 'balanced', $weight, true);
+        $demo = $result['demonstration'];
+
+        // La demostración debe usar el peso elegido, no volver al 50/50 predeterminado.
+        $this->assertSame($expectedIds, array_column($demo['flights'], 'id'));
+        $this->assertSame($expectedScores, array_column($demo['input'], 'score'));
+        $this->assertSame($result['flights'], $demo['flights']);
+        $this->assertSame($expectedComparisons, $demo['comparisons']);
+        $this->assertSame($expectedComparisons, $result['comparisons']);
+        $this->assertFinalEventMatchesDemonstration($demo);
+    }
+
+    public static function demonstrationWeights(): array
+    {
+        return [
+            'time only' => [0.0, [2, 3, 1], [1.0, 0.0, 0.1], 3],
+            'price only' => [1.0, [1, 3, 2], [0.0, 1.0, 4 / 15], 2],
+        ];
+    }
+
     #[DataProvider('criteria')]
     public function test_equal_flights_remain_stable_in_the_demonstration(string $criterion): void
     {
